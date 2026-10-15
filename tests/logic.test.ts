@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   cells,
+  firstPageRows,
   fitWithin,
   layoutGrid,
   pageCount,
@@ -37,6 +38,17 @@ test("all PDF layouts fit page with sensible grids", () => {
   }
   assert.deepEqual(layoutGrid(6, "portrait"), { columns: 2, rows: 3 });
   assert.deepEqual(layoutGrid(8, "landscape"), { columns: 4, rows: 2 });
+});
+test("five-image PDF reserves first-page text space and carries photos forward", () => {
+  const inset = 500;
+  const rows = firstPageRows(4, "A4", "portrait", inset);
+  const firstSlots = cells(4, "A4", "portrait", inset, rows);
+  assert.equal(firstSlots.length, 2);
+  assert.equal(1 + pageCount(5 - firstSlots.length, 4), 2);
+  for (const slot of firstSlots) {
+    assert.ok(slot.y >= 32);
+    assert.ok(slot.y + slot.height <= pageSize("A4", "portrait")[1] - 32 - inset);
+  }
 });
 test("filenames follow collection order and pad", () => {
   assert.equal(sequenceName(0, 2), "photo-001.jpg");

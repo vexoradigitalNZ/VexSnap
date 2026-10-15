@@ -155,6 +155,47 @@ try {
   assert.equal(largePdf.getPageCount(), 5);
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Remove all" }).click();
+  await page.locator('input[aria-label="Choose photos"]').setInputFiles(
+    Array.from({ length: 5 }, (_, i) => ({
+      name: `inventory-${i + 1}.png`, mimeType: "image/png", buffer,
+    })),
+  );
+  await page.locator(".photo-card").nth(4).waitFor();
+  await page.getByRole("button", { name: "4", exact: true }).click();
+  await page.getByLabel("Orientation").selectOption("portrait");
+  await page.getByLabel("Document Title (optional)").fill("Furniture & Artwork Inventory — café");
+  await page.getByLabel("Description / Notes (optional)").fill(
+    "Items requiring careful handling and protective wrapping during transportation.\n\nKeep the framed artwork upright.",
+  );
+  await page.getByRole("button", { name: /Create PDF/ }).click();
+  await page.getByRole("button", { name: /Download PDF/ }).waitFor();
+  const titledEvent = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Download PDF/ }).click();
+  const titledPdf = await PDFDocument.load(
+    await (await import("node:fs/promises")).readFile(await (await titledEvent).path()),
+  );
+  assert.equal(titledPdf.getPageCount(), 2);
+  await page.getByLabel("Document Title (optional)").fill("Updated inventory");
+  assert.equal(await page.getByRole("button", { name: /Download PDF/ }).count(), 0);
+  await page.getByLabel("Description / Notes (optional)").fill("A long note. ".repeat(170));
+  await page.getByRole("button", { name: /Create PDF/ }).click();
+  await page.getByRole("button", { name: /Download PDF/ }).waitFor();
+  const longEvent = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Download PDF/ }).click();
+  const longPdf = await PDFDocument.load(
+    await (await import("node:fs/promises")).readFile(await (await longEvent).path()),
+  );
+  assert.ok(longPdf.getPageCount() >= 2);
+  for (const width of [320, 390, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+      `PDF text overflows at ${width}px`,
+    );
+  }
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Remove all" }).click();
   await page
     .locator('input[aria-label="Choose photos"]')
     .setInputFiles({ name: "only.png", mimeType: "image/png", buffer });
@@ -172,7 +213,7 @@ try {
   await page.locator(".error-box").waitFor();
   assert.match(await page.locator(".error-box").innerText(), /bad.jpg/);
   console.log(
-    "E2E PASS: import, reorder, rotate, remove, compress, direct JPEG, ZIP, five PDF layouts, 17-photo page count, landscape, corrupt file, responsive widths",
+    "E2E PASS: import, reorder, rotate, remove, compress, direct JPEG, ZIP, PDF layouts, title and notes, regeneration, long notes, landscape, corrupt file, responsive widths",
   );
 } finally {
   await browser.close();

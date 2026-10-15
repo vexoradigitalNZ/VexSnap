@@ -6,8 +6,10 @@ import { PhotoCard } from "@/components/PhotoCard";
 import { CompressionSettings } from "@/components/CompressionSettings";
 import {
   buildPdf,
+  firstPageRows,
   layoutGrid,
   pageCount,
+  pageSize,
   type Orientation,
   type Paper,
   type PerPage,
@@ -51,6 +53,8 @@ export default function Home() {
   const [perPage, setPerPage] = useState<PerPage>(4);
   const [paper, setPaper] = useState<Paper>("A4");
   const [orientation, setOrientation] = useState<Orientation>("portrait");
+  const [pdfTitle, setPdfTitle] = useState("");
+  const [pdfDescription, setPdfDescription] = useState("");
   const [busy, setBusy] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
   const [actualSize, setActualSize] = useState<number | null>(null);
@@ -78,7 +82,24 @@ export default function Home() {
 
   const config = compressionFor(preset, custom);
   const total = photos.reduce((sum, photo) => sum + photo.file.size, 0);
-  const pages = pageCount(photos.length, perPage);
+  const hasPdfText = !!(pdfTitle.trim() || pdfDescription.trim());
+  const [previewWidth] = pageSize(paper, orientation);
+  const approximateLines = (value: string, points: number) =>
+    value ? value.replace(/\r\n?/g, "\n").split("\n").reduce((total, line) => total + Math.max(1, Math.ceil(line.length * points * 0.5 / (previewWidth - 64))), 0) : 0;
+  const previewInset = approximateLines(pdfTitle.trim(), 22) * 27 +
+    approximateLines(pdfDescription.trim(), 10.5) * 15 +
+    (pdfTitle.trim() && pdfDescription.trim() ? 8 : 0) + 22;
+  let previewFirstCount: number = perPage;
+  if (hasPdfText) {
+    try {
+      previewFirstCount = firstPageRows(perPage, paper, orientation, previewInset) * layoutGrid(perPage, orientation).columns;
+    } catch {
+      previewFirstCount = 0;
+    }
+  }
+  const pages = hasPdfText
+    ? 1 + pageCount(Math.max(0, photos.length - previewFirstCount), perPage)
+    : pageCount(photos.length, perPage);
   const selected = photos.find((photo) => photo.id === previewId);
   function invalidate() {
     cache.current.clear();
@@ -213,6 +234,7 @@ export default function Home() {
           paper,
           orientation,
           (done) => setBusy(`Creating PDF… ${done} of ${blobs.length}`),
+          { title: pdfTitle, description: pdfDescription },
         );
         setPdfBlob(
           new Blob([new Uint8Array(bytes)], { type: "application/pdf" }),
@@ -414,6 +436,33 @@ export default function Home() {
                 <h3>One neat PDF</h3>
                 <p>Combine your photos into a document, in the order above.</p>
                 <div className="pdf-settings">
+                  <div className="pdf-text-settings">
+                    <h4>PDF Title &amp; Description</h4>
+                    <label htmlFor="pdf-title">Document Title <span>(optional)</span></label>
+                    <input
+                      id="pdf-title"
+                      type="text"
+                      placeholder="Enter a title for your PDF"
+                      value={pdfTitle}
+                      disabled={!!busy}
+                      onChange={(event) => {
+                        setPdfTitle(event.target.value);
+                        setPdfBlob(null);
+                      }}
+                    />
+                    <label htmlFor="pdf-description">Description / Notes <span>(optional)</span></label>
+                    <textarea
+                      id="pdf-description"
+                      rows={3}
+                      placeholder="Add a short description or notes about these images..."
+                      value={pdfDescription}
+                      disabled={!!busy}
+                      onChange={(event) => {
+                        setPdfDescription(event.target.value);
+                        setPdfBlob(null);
+                      }}
+                    />
+                  </div>
                   <fieldset>
                     <legend>Images per page</legend>
                     <div className="segmented">
@@ -463,14 +512,20 @@ export default function Home() {
                 </div>
                 <div className="pdf-preview">
                   <div className={`paper-preview ${orientation}`}>
+                    {hasPdfText && (
+                      <div className="preview-page-text" aria-hidden="true">
+                        {pdfTitle.trim() && <b>{pdfTitle.trim()}</b>}
+                        {pdfDescription.trim() && <span>{pdfDescription.trim()}</span>}
+                      </div>
+                    )}
                     <div
                       className="preview-grid"
                       style={{
                         gridTemplateColumns: `repeat(${layoutGrid(perPage, orientation).columns}, 1fr)`,
-                        gridTemplateRows: `repeat(${layoutGrid(perPage, orientation).rows}, 1fr)`,
+                        gridTemplateRows: `repeat(${Math.max(1, previewFirstCount / layoutGrid(perPage, orientation).columns)}, 1fr)`,
                       }}
                     >
-                      {Array.from({ length: perPage }, (_, i) => (
+                      {Array.from({ length: Math.min(perPage, previewFirstCount) }, (_, i) => (
                         <span key={i}>
                           {photos[i] ? (
                             <img
@@ -487,13 +542,19 @@ export default function Home() {
                   </div>
                   <div>
                     <strong>
-                      {pages} {pages === 1 ? "page" : "pages"}
+                      {hasPdfText ? "About " : ""}{pages} {pages === 1 ? "page" : "pages"}
                     </strong>
                     <span>
                       {photos.length} photos · {perPage} per page
                       <br />
                       {paper} · {orientation}
                     </span>
+                    {hasPdfText && (
+                      <div className="preview-copy">
+                        {pdfTitle.trim() && <b>{pdfTitle.trim()}</b>}
+                        {pdfDescription.trim() && <span>{pdfDescription.trim()}</span>}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <button
