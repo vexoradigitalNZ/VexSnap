@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PhotoCard } from "@/components/PhotoCard";
 import { CompressionSettings } from "@/components/CompressionSettings";
+import { BrandMark } from "@/components/BrandMark";
 import {
   buildPdf,
   firstPageRows,
@@ -256,17 +257,25 @@ export default function Home() {
 
   return (
     <main className="shell">
+      <a className="skip-link" href="#upload">Skip to photo tools</a>
       <header className="topbar">
-        <span className="brand-mark" aria-hidden="true">VS</span>
-        <span className="brand">Vex<span>Snap</span></span>
-        <span className="top-note">A Vexora Digital tool</span>
+        <a className="brand-link" href="#upload" aria-label="VexSnap home">
+          <span className="brand-mark"><BrandMark /></span>
+          <span className="brand">Vex<span>Snap</span></span>
+        </a>
+        <nav aria-label="Photo tools" className="stage-nav">
+          <a href="#upload">Add photos</a>
+          {photos.length > 0 && <><a href="#compression">Settings</a><a href="#export">Export</a></>}
+        </nav>
+        <span className="top-note"><span className="dot" /> On-device processing</span>
       </header>
-      <section className="hero">
-        <div className="eyebrow">SIMPLE PHOTO TOOLS</div>
+      <section className={`hero ${photos.length ? "has-photos" : ""}`} id="upload">
+        <div className="hero-badge"><span className="dot" /> YOUR PHOTOS. YOUR DEVICE.</div>
         <h1>Compress photos.<br /><em>Create PDFs.</em></h1>
         <p>
-          Compress photos, download smaller JPEGs, or combine them into a PDF.
+          Smaller files. Ready to share. Turn your photos into JPEGs or a PDF, right in your browser.
         </p>
+        <div className="upload-panel">
         <div className="add-actions">
           <button
             className="button primary add-button"
@@ -283,12 +292,15 @@ export default function Home() {
             Take a photo
           </button>
         </div>
+        <p className="format-note">JPEG, PNG &amp; WebP · HEIC where your browser supports it</p>
+        </div>
         <input
           ref={picker}
           className="visually-hidden"
           type="file"
           accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
           multiple
+          tabIndex={-1}
           onChange={(event) => void addFiles(event.target.files)}
           aria-label="Choose photos"
         />
@@ -298,11 +310,19 @@ export default function Home() {
           type="file"
           accept="image/*"
           capture="environment"
+          tabIndex={-1}
           onChange={(event) => void addFiles(event.target.files)}
           aria-label="Take a photo with camera"
         />
-        <p className="privacy">Your photos stay on your device.</p>
+        <p className="privacy">Your photos stay on your device. No upload required.</p>
       </section>
+      {photos.length === 0 && (
+        <section className="workflow" aria-label="How VexSnap works">
+          <div><span className="step-number">01</span><div><h2>Add your photos</h2><p>Choose images or take a photo.</p></div></div>
+          <div><span className="step-number">02</span><div><h2>Make them lighter</h2><p>Pick a size. Keep the detail you need.</p></div></div>
+          <div><span className="step-number">03</span><div><h2>Save and share</h2><p>Download JPEGs, a ZIP, or one PDF.</p></div></div>
+        </section>
+      )}
       {errors.length > 0 && (
         <div className="error-box" role="alert">
           <strong>Something needs attention</strong>
@@ -412,12 +432,13 @@ export default function Home() {
             onCustom={changeCustom}
             onCalculate={() => void run("compress")}
           />
-          <section className="section" aria-labelledby="export-title">
-            <div className="eyebrow">03 / TAKE THEM WITH YOU</div>
-            <h2 id="export-title">Choose your output</h2>
+          <section className="section" id="export" aria-labelledby="export-title">
+            <div className="eyebrow">03 / EXPORT</div>
+            <h2 id="export-title">Ready to share.</h2>
+            <p>Save individual images or bring everything together in a PDF.</p>
             <div className="output-grid">
               <div className="output-card">
-                <div className="output-icon">↧</div>
+                <div className="output-icon" aria-hidden="true">↧</div>
                 <h3>Compressed images</h3>
                 <p>
                   Download smaller JPEG copies of your photos. Multiple photos
@@ -432,8 +453,8 @@ export default function Home() {
                 </button>
               </div>
               <div className="output-card pdf-card">
-                <div className="output-icon">▤</div>
-                <h3>One neat PDF</h3>
+                <div className="output-icon" aria-hidden="true">▤</div>
+                <h3>Photos to PDF</h3>
                 <p>Combine your photos into a document, in the order above.</p>
                 <div className="pdf-settings">
                   <div className="pdf-text-settings">
@@ -565,8 +586,10 @@ export default function Home() {
                   Create PDF <span>↗</span>
                 </button>
                 {pdfBlob && (
+                  <div className="export-result" role="status">
+                  <p>Your PDF is ready · {formatBytes(pdfBlob.size)}</p>
                   <button
-                    className="button secondary full download-pdf"
+                    className="button primary full download-pdf"
                     onClick={() =>
                       download(
                         pdfBlob,
@@ -576,6 +599,7 @@ export default function Home() {
                   >
                     Download PDF ↓
                   </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -583,7 +607,7 @@ export default function Home() {
         </>
       )}
       <footer>
-        <span className="footer-brand">Vex<span>Snap</span></span>
+        <span className="footer-logo"><span className="brand-mark"><BrandMark /></span><span className="footer-brand">Vex<span>Snap</span></span></span>
         <small>A Vexora Digital tool</small>
       </footer>
       <dialog

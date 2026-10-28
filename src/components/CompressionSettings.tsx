@@ -20,8 +20,8 @@ export function CompressionSettings({
   onCalculate,
 }: Props) {
   return (
-    <section className="section" aria-labelledby="compression-title">
-      <div className="eyebrow">02 / MAKE THEM LIGHTER</div>
+    <section className="section" id="compression" aria-labelledby="compression-title">
+      <div className="eyebrow">02 / COMPRESSION</div>
       <h2 id="compression-title">Choose a size</h2>
       <p>
         We resize large photos and make smaller JPEG copies. Smaller photos are
@@ -45,7 +45,7 @@ export function CompressionSettings({
               {option === "small"
                 ? "Best for sharing"
                 : option === "balanced"
-                  ? "A little of both"
+                  ? "Size meets detail"
                   : option === "high"
                     ? "More detail"
                     : "Set your own"}
