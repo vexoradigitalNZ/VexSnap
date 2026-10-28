@@ -275,6 +275,11 @@ export default function Home() {
         <p>
           Smaller files. Ready to share. Turn your photos into JPEGs or a PDF, right in your browser.
         </p>
+        <a className="guide-button" href="/guide" target="_blank" rel="noopener noreferrer">
+          <span className="guide-play" aria-hidden="true">▶</span>
+          <span>How to use VexSnap<span className="guide-button-detail">Watch the video guide · opens in a new tab</span></span>
+          <span aria-hidden="true">↗</span>
+        </a>
         <div className="upload-panel">
         <div className="add-actions">
           <button
